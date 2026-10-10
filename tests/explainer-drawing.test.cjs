@@ -121,10 +121,10 @@ test('drawing: mistakes are reported where they are, the broken shape is left ou
   assert.match(compileOf({ block: 'drawing', shapes: [{ type: 'circle', x: 0, y: 0, r: 1 }] }).issues[0].message, /stage needs w and h/);
 });
 
-/** The numbers and colours the hand-written engine would draw, for comparing against the drawing. */
+/** The numbers and colours the hand-written engine would draw, for comparing against the drawing. One four-stroke cycle per 34 s scene, like the drawing. */
 function referenceAt(themeId, ms) {
   const project = { aspect: '16:9', theme: themeId, scenes: [] };
-  return { project, state: engine.engineState((ms / 1000) * 90), colors: engine.partColors(themeId) };
+  return { project, state: engine.engineState((ms / 1000) * (720 / 34)), colors: engine.partColors(themeId) };
 }
 
 test('the engine written as data draws exactly what the hand-written engine does, in both themes', () => {

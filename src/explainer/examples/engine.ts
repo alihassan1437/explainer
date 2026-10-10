@@ -26,10 +26,11 @@ export const ENGINE_DRAWING: DrawingScene = {
   lengthMs: 34000,
   // The drawing's own units: 8.4 wide, 6.2 tall, with the point (-0.1, 1.7) at the middle of the stage. y points up; the crankshaft is at (0, 0).
   stage: { w: 8.4, h: 6.2, cx: -0.1, cy: 1.7 },
-  params: { degPerSec: 90, R: 0.55, L: 1.9, headY: 2.85, ductY: 3.05, camY: 4.1, camR: 0.28, lobe: 0.18, lw: 0.366 },
+  params: { R: 0.55, L: 1.9, headY: 2.85, ductY: 3.05, camY: 4.1, camR: 0.28, lobe: 0.18, lw: 0.366 },
   // Values worked out every frame, in order. The crank angle is the only thing that moves; everything else follows from it.
+  // One full four-stroke cycle per scene, so the strokes track the narration: intake, compression, power, exhaust in quarters.
   vars: {
-    crank: 't*degPerSec',                     // total crank angle
+    crank: 't*720/len',                       // total crank angle
     phi: 'wrap(crank,720)',                     // position in the four-stroke cycle: 0 to 720
     cyc: 'floor(crank/720)',                    // which cycle this is
     th: 'rad(wrap(phi,360))',                 // crank angle from the top
@@ -66,11 +67,11 @@ export const ENGINE_DRAWING: DrawingScene = {
     exhaust: { color: { byTheme: { blueprint: '#9aa8bd', flat: '#7b7f9e' } } },
   },
   cues: [
-    { at: 600, do: 'highlight', part: 'intakeValve' },
-    { at: 8600, do: 'highlight', part: 'piston' },
-    { at: 16200, do: 'highlight', part: 'sparkPlug' },
-    { at: 17400, do: 'highlight', part: 'piston', ms: 3200 },
-    { at: 25000, do: 'highlight', part: 'exhaustValve' },
+    { at: { frac: 0.02 }, do: 'highlight', part: 'intakeValve' },
+    { at: { frac: 0.26 }, do: 'highlight', part: 'piston' },
+    { at: { frac: 0.48 }, do: 'highlight', part: 'sparkPlug' },
+    { at: { frac: 0.52 }, do: 'highlight', part: 'piston', ms: 3200 },
+    { at: { frac: 0.74 }, do: 'highlight', part: 'exhaustValve' },
   ],
   shapes: [
     // The crankcase and cylinder walls, and the dark inside of the chamber.
