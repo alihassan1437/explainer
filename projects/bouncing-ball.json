@@ -1,0 +1,60 @@
+{
+  "aspect": "16:9",
+  "theme": "blueprint",
+  "scenes": [
+    {
+      "block": "title",
+      "text": "The bouncing ball",
+      "subtitle": "Drawn by an agent, through MCP",
+      "lengthMs": 2500
+    },
+    {
+      "block": "drawing",
+      "title": "A bouncing ball",
+      "lengthMs": 8000,
+      "stage": {
+        "w": 8,
+        "h": 6
+      },
+      "parts": {
+        "ball": {
+          "color": "accent",
+          "label": {
+            "text": "Ball",
+            "at": [
+              3.2,
+              1.5
+            ],
+            "to": [
+              0.9,
+              0.2
+            ],
+            "align": "left"
+          }
+        }
+      },
+      "vars": {
+        "by": "-1.5+2*abs(sin(t*2.5))"
+      },
+      "shapes": [
+        {
+          "type": "line",
+          "x1": -4,
+          "y1": -2,
+          "x2": 4,
+          "y2": -2,
+          "stroke": "dim",
+          "width": 2
+        },
+        {
+          "type": "circle",
+          "part": "ball",
+          "x": "0.5*sin(t*1.2)",
+          "y": "by+0.5",
+          "r": 0.5
+        }
+      ]
+    }
+  ],
+  "script": "A ball, bouncing. Gravity pulls it down, the floor pushes back, and up it goes again. A perfect loop, drawn entirely as data by an agent."
+}

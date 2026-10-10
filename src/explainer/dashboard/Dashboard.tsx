@@ -43,8 +43,21 @@ export default function Dashboard() {
     listDocs().then(setDocs).catch(() => setDocs([]));
   }, []);
   useEffect(refresh, [refresh]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const openDoc = (id: string): void => router.push(`/p/${id}`);
+  const importFile = async (f: File): Promise<void> => {
+    try {
+      const raw = JSON.parse(await f.text()) as { scenes?: unknown[]; aspect?: string; theme?: string; script?: string };
+      if (!raw || !Array.isArray(raw.scenes) || !raw.scenes.length) throw new Error('not a project');
+      const title = f.name.replace(/\.json$/i, '').replace(/[-_]+/g, ' ') || 'Imported video';
+      const doc = newDoc(title, raw as Project, typeof raw.script === 'string' ? raw.script : '');
+      await putDoc(doc);
+      router.push(`/p/${doc.id}`);
+    } catch {
+      window.alert('That file is not an Explainer project.');
+    }
+  };
   const create = async (title: string, project: Project, script: string): Promise<void> => {
     if (busy) return;
     setBusy(true);
@@ -80,6 +93,11 @@ export default function Dashboard() {
           <button type="button" onClick={() => setShowNew(true)} className={`${btn} ${btnPrimary} ml-auto`}>
             ＋ New video
           </button>
+          <button type="button" onClick={() => fileRef.current?.click()} className={`${btn} ${btnQuiet}`}>
+            Import JSON
+          </button>
+          <input ref={fileRef} type="file" accept=".json,application/json" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
         </header>
 
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Start from an example</h2>

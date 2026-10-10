@@ -1,0 +1,20 @@
+{
+  "name": "explainer-mcp",
+  "version": "1.0.0",
+  "description": "MCP server: agents draw with the Explainer app (validate drawings, use examples, save projects).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1"
+  },
+  "private": true,
+  "bin": {
+    "explainer-mcp": "./server.mjs"
+  },
+  "type": "module"
+}
