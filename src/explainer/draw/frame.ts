@@ -10,6 +10,7 @@ import type { Env } from './env';
 import { drawTitle } from '../blocks/title';
 import { drawBullets } from '../blocks/bullets';
 import { drawDrawing } from '../drawing/render';
+import { drawCaptions } from './captions';
 
 const FADE_MS = 280;
 
@@ -39,6 +40,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, project: Project, t: nu
       drawSceneTitle(env, s.title);
       drawDrawing(env, s);
     }
+    drawCaptions(ctx, project, palette, f, now);
   }
   ctx.restore();
 }

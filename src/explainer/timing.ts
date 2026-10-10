@@ -63,3 +63,22 @@ export function resolveAt(at: At | undefined, scene: { startMs: number; endMs: n
   }
   return null;
 }
+
+/**
+ * Scales every scene's length so the whole video lasts as long as the
+ * narration (keeping the scenes' proportions, with a floor per scene).
+ * Word cues then resolve inside scenes by time, as usual.
+ */
+export function fitScenesToNarration(project: Project): Project {
+  const words = project.narration?.words;
+  if (!words?.length) return project;
+  const narrationMs = words.reduce((m, w) => Math.max(m, w.endMs), 0);
+  const { totalMs } = layoutTimeline(project);
+  if (!totalMs || narrationMs <= 0) return project;
+  const k = narrationMs / totalMs;
+  const scenes = project.scenes.map(s => ({
+    ...s,
+    lengthMs: Math.max(MIN_SCENE_MS, Math.round(sceneLengthMs(s) * k)),
+  }));
+  return { ...project, scenes };
+}
