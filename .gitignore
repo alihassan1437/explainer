@@ -9,3 +9,6 @@ next-env.d.ts
 .vercel/
 npm-debug.log*
 data/
+
+# Agent-saved projects (local work files)
+projects/
