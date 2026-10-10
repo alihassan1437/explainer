@@ -5,7 +5,7 @@
 
 export const SSML_MAX_BYTES = 4600; // Google rejects requests over 5,000 bytes
 const SAMPLE_RATE = 24000;
-const ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+const ENDPOINT = 'https://texttospeech.googleapis.com/v1beta1/text:synthesize';
 
 export const escapeXml = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
