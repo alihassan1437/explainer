@@ -86,6 +86,16 @@ Labels: `label: { text, at: [x, y], to: [x, y], align }`. `at` is where the word
 
 `events` and `cues` take `at`: a number of milliseconds from the start of the scene, `{ "word": "piston" }` (the moment that word is spoken in this scene; `occurrence` picks the 2nd, 3rd...), or `{ "frac": 0.5 }` (half way through the scene). Word timing only works once the video has narration.
 
+## The agent loop: write, check, fix
+
+Nothing here is code, so an agent writes drawings as JSON and checks them headlessly before ever opening the app:
+
+```
+npm run validate-drawing -- my-drawing.json
+```
+
+The file holds one drawing, or a whole project (every drawing scene is checked). It reports each problem as a sentence that says where and what, dry-runs sample frames in both themes to catch frames over the expression-step budget, and exits 0 when the drawing is clean, 1 on errors (or warnings with `--strict`), 2 on file problems. `--json` prints the same report as JSON; `--samples 9` checks more moments. The loop is: write the JSON, run the checker, fix what it names, repeat until it exits 0 — then look at it in the editor.
+
 ## What the checker tells you
 
 Every problem comes back as a sentence that says where and what, for example: `Scene 2: shape 8 ("gas") fill (by): the expression "pb*0.95" uses "pb", which is not defined.` A shape with a problem is left out and the rest still draws, so you can always look at a preview. Names must be letters, digits and `_`, start with a letter, not be a built-in or a function name, and not be one of JavaScript's own (`constructor`, `__proto__`, `toString`...).

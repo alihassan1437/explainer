@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node tests/explainer.test.cjs && node tests/explainer-drawing.test.cjs && node tests/explainer-narration.test.cjs"
+    "test": "node tests/explainer.test.cjs && node tests/explainer-drawing.test.cjs && node tests/explainer-narration.test.cjs",
+    "validate-drawing": "node cli/validate-drawing.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.475.0",

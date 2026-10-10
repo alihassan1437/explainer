@@ -250,3 +250,28 @@ test('schema: drawings are checked with the rest of the project, and their lengt
   assert.doesNotThrow(() => render(good.project, 12000));
   assert.equal(timing.layoutTimeline(good.project).totalMs, 3000 + 34000);
 });
+
+test('cli/validate-drawing: the headless agent check accepts good drawings and rejects bad ones', () => {
+  const { spawnSync } = require('node:child_process');
+  const os = require('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-'));
+  const cli = path.join(__dirname, '../cli/validate-drawing.cjs');
+  const run = (args) => spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
+
+  const good = path.join(dir, 'good.json');
+  fs.writeFileSync(good, JSON.stringify(engineData.ENGINE_DRAWING));
+  const ok = run([good]);
+  assert.equal(ok.status, 0, ok.stderr + ok.stdout);
+  assert.match(ok.stdout, /0 error\(s\), 0 warning\(s\)/);
+
+  const bad = path.join(dir, 'bad.json');
+  fs.writeFileSync(bad, JSON.stringify({ block: 'drawing', shapes: [{ type: 'circle', x: '1+', y: 0, r: 1, part: 'nope' }] }));
+  const rejected = run([bad]);
+  assert.equal(rejected.status, 1);
+  assert.match(rejected.stdout, /ERROR/);
+
+  const missing = run([path.join(dir, 'nope.json')]);
+  assert.equal(missing.status, 2);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+});
