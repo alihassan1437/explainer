@@ -10,6 +10,8 @@ import { DEFAULT_VOICE } from '../voices';
 import { ScriptPanel } from './ScriptPanel';
 import { SceneStrip } from './SceneStrip';
 import { Inspector } from './Inspector';
+import { playWhoosh, uiAudioContext } from './whoosh';
+import { downloadExport, exportVideo } from './export';
 
 const DEMO_SCRIPT = `How does a car engine turn fuel into motion? It all comes down to four strokes, repeating hundreds of times every minute.
 
@@ -48,6 +50,11 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
   const [musicUrl, setMusicUrl] = useState('');
   const [musicVol, setMusicVol] = useState(0.5);
   const [whooshOn, setWhooshOn] = useState(true);
+  // Export.
+  const [exporting, setExporting] = useState<null | { done: number; total: number }>(null);
+  const [exportError, setExportError] = useState('');
+  const [exportUrl, setExportUrl] = useState<string | null>(null);
+  const cancelExport = useRef(false);
 
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -58,7 +65,6 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
   const lastSceneRef = useRef(-1);
   const narrationAudio = useRef<HTMLAudioElement | null>(null);
   const musicAudio = useRef<HTMLAudioElement | null>(null);
-  const whooshCtx = useRef<AudioContext | null>(null);
   musicVolRef.current = musicVol;
   whooshOnRef.current = whooshOn;
 
@@ -79,25 +85,8 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
   };
   const whoosh = (): void => {
     if (!whooshOnRef.current) return;
-    try {
-      whooshCtx.current ??= new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const ac = whooshCtx.current;
-      if (ac.state === 'suspended') void ac.resume();
-      const dur = 0.45;
-      const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-      const src = ac.createBufferSource(); src.buffer = buf;
-      const filt = ac.createBiquadFilter(); filt.type = 'bandpass'; filt.Q.value = 1.2;
-      filt.frequency.setValueAtTime(400, ac.currentTime);
-      filt.frequency.exponentialRampToValueAtTime(3200, ac.currentTime + dur);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.22, ac.currentTime + 0.08);
-      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
-      src.connect(filt); filt.connect(g); g.connect(ac.destination);
-      src.start();
-    } catch { /* decoration only */ }
+    const ac = uiAudioContext();
+    if (ac) playWhoosh(ac);
   };
 
   // Time only moves here; every picture comes from drawFrame.
@@ -263,6 +252,35 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
     else { m.pause(); m.removeAttribute('src'); }
   };
 
+  // --- export ------------------------------------------------------------------
+  const startExport = async (): Promise<void> => {
+    if (exporting) return;
+    doPause();
+    setExportError(''); setExportUrl(null);
+    setExporting({ done: 0, total: 1 });
+    cancelExport.current = false;
+    try {
+      const result = await exportVideo({
+        project,
+        narrationDataUrl: narrationAudio.current?.src || null,
+        musicUrl: musicUrl || null,
+        musicVol, whooshOn,
+        onProgress: (done, total) => setExporting({ done, total }),
+        isCancelled: () => cancelExport.current,
+      });
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+      const url = downloadExport(result, `explainer-${stamp}`);
+      setExportUrl(url);
+    } catch (e) {
+      if (!(e instanceof Error && e.message === 'cancelled')) {
+        setExportError(e instanceof Error ? e.message : 'The export failed.');
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+  const closeExportModal = (): void => { setExportUrl(null); setExportError(''); };
+
   const sceneLen = (s: Scene): number => sceneLengthMs(s);
 
   return (
@@ -277,9 +295,9 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
           ))}
         </nav>
         <span className="ml-auto text-xs text-slate-500">{(total / 1000).toFixed(1)}s</span>
-        <button type="button" disabled title="Video export is coming next"
-          className={`${btn} cursor-not-allowed border-white/10 text-slate-600`}>
-          Export MP4 · soon
+        <button type="button" onClick={() => void startExport()}
+          className={`${btn} border-sky-400/40 bg-sky-400/10 font-semibold text-sky-200 hover:bg-sky-400/20`}>
+          Export MP4
         </button>
       </header>
 
@@ -330,6 +348,41 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
           whooshOn={whooshOn} setWhooshOn={setWhooshOn}
         />
       </div>
+
+      {/* export modal */}
+      {(exporting || exportUrl || exportError) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="w-[320px] rounded-xl border border-white/10 bg-slate-900 p-5">
+            <h3 className="mb-3 text-sm font-semibold">Export video</h3>
+            {exporting && (
+              <>
+                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-sky-400 transition-all"
+                    style={{ width: `${Math.min(100, (exporting.done / Math.max(1, exporting.total)) * 100)}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-slate-400">
+                  {(exporting.done / 1000).toFixed(0)}s of {(exporting.total / 1000).toFixed(0)}s — keep this tab visible.
+                </p>
+                <button type="button" onClick={() => { cancelExport.current = true; }}
+                  className={`${btn} mt-4 w-full ${btnOff}`}>Cancel</button>
+              </>
+            )}
+            {exportUrl && (
+              <>
+                <p className="text-sm text-slate-300">Done — your download has started.</p>
+                <a href={exportUrl} download className={`${btn} mt-4 w-full ${btnOn}`}>Download again</a>
+                <button type="button" onClick={closeExportModal} className={`${btn} mt-2 w-full ${btnOff}`}>Close</button>
+              </>
+            )}
+            {exportError && (
+              <>
+                <p className="text-sm text-red-300">{exportError}</p>
+                <button type="button" onClick={closeExportModal} className={`${btn} mt-4 w-full ${btnOff}`}>Close</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
