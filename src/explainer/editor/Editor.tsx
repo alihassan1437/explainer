@@ -70,6 +70,7 @@ export default function Editor({ initialDoc, onDocChange, saveState }: {
   const ratio = project.aspect === '16:9' ? 16 / 9 : 9 / 16;
   const setTheme = (theme: ThemeId): void => setProject(p => ({ ...p, theme }));
   const setAspect = (aspect: Project['aspect']): void => setProject(p => ({ ...p, aspect }));
+  const setCaptions = (on: boolean): void => setProject(p => ({ ...p, captions: on }));
 
   // --- audio ---------------------------------------------------------------
   const pauseAudio = (): void => { narrationAudio.current?.pause(); musicAudio.current?.pause(); };
@@ -205,6 +206,10 @@ export default function Editor({ initialDoc, onDocChange, saveState }: {
   };
   const updateScene = (i: number, patch: Partial<Scene>): void =>
     setProject(p => ({ ...p, scenes: p.scenes.map((s, k) => (k === i ? ({ ...s, ...patch } as Scene) : s)) }));
+  const replaceScene = (i: number, scene: Scene): void => {
+    doPause();
+    setProject(p => ({ ...p, scenes: p.scenes.map((s, k) => (k === i ? scene : s)) }));
+  };
   const addScene = (block: Scene['block']): void => {
     const base: Scene = block === 'title'
       ? { block: 'title', text: 'New title', lengthMs: 3000 }
@@ -362,8 +367,8 @@ export default function Editor({ initialDoc, onDocChange, saveState }: {
         {/* inspector */}
         <Inspector
           project={project} selected={selected} sceneLen={sceneLen}
-          onUpdateScene={updateScene} onAddScene={addScene} onDeleteScene={deleteScene}
-          onSetTheme={setTheme} onSetAspect={setAspect}
+          onUpdateScene={updateScene} onReplaceScene={replaceScene} onAddScene={addScene} onDeleteScene={deleteScene}
+          onSetTheme={setTheme} onSetAspect={setAspect} onSetCaptions={setCaptions}
           onSetPart={setPart}
           musicUrl={musicUrl} setMusic={setMusic} musicVol={musicVol} setMusicVol={setMusicVol}
           whooshOn={whooshOn} setWhooshOn={setWhooshOn}

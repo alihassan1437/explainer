@@ -1,19 +1,23 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Project, Scene, ThemeId } from '../types';
+import type { DrawingScene } from '../drawing/types';
 import { THEMES, paletteOf } from '../theme';
 import { compiledFor } from '../drawing/compile';
 import { evalDrawing } from '../drawing/render';
 import { btn, btnOff, btnOn, field, label } from './Editor';
+import { DrawingEditor } from './DrawingEditor';
 
 interface Props {
   project: Project;
   selected: number;
   sceneLen: (s: Scene) => number;
   onUpdateScene: (i: number, patch: Partial<Scene>) => void;
+  onReplaceScene: (i: number, scene: Scene) => void;
   onAddScene: (block: Scene['block']) => void;
   onDeleteScene: (i: number) => void;
   onSetTheme: (t: ThemeId) => void;
   onSetAspect: (a: Project['aspect']) => void;
+  onSetCaptions: (on: boolean) => void;
   onSetPart: (name: string, value: string) => void;
   musicUrl: string; setMusic: (u: string) => void;
   musicVol: number; setMusicVol: (v: number) => void;
@@ -37,6 +41,7 @@ const blockName = (s: Scene): string => (s.block === 'title' ? 'Title' : s.block
 export function Inspector(p: Props) {
   const scene = p.project.scenes[p.selected];
   const parts = useMemo(() => partsOf(p.project, scene), [p.project, scene]);
+  const [editingDrawing, setEditingDrawing] = useState(false);
 
   return (
     <aside className="w-[280px] shrink-0 space-y-4 overflow-y-auto border-l border-white/10 p-3">
@@ -70,6 +75,8 @@ export function Inspector(p: Props) {
           <div className="space-y-2">
             <input value={scene.title ?? ''} onChange={e => p.onUpdateScene(p.selected, { title: e.target.value })}
               className={field} placeholder="Heading (optional)" />
+            <button type="button" onClick={() => setEditingDrawing(true)}
+              className={`${btn} ${btnOff} w-full`}>Edit drawing JSON</button>
             <p className="text-[11px] leading-snug text-slate-600">The drawing itself is written as data — by the script's author, or by an agent.</p>
           </div>
         )}
@@ -108,6 +115,11 @@ export function Inspector(p: Props) {
               className={`${btn} flex-1 ${p.project.aspect === a ? btnOn : btnOff}`}>{a}</button>
           ))}
         </div>
+        <label className="mt-2 flex cursor-pointer items-center gap-2 text-[13px] text-slate-300">
+          <input type="checkbox" checked={p.project.captions !== false}
+            onChange={e => p.onSetCaptions(e.target.checked)} className="accent-sky-400" />
+          Word captions
+        </label>
       </section>
 
       {/* parts */}
@@ -150,6 +162,14 @@ export function Inspector(p: Props) {
         </label>
         <p className="mt-1 text-[11px] text-slate-600">Music ducks under the narration while it speaks.</p>
       </section>
+
+      {editingDrawing && scene?.block === 'drawing' && (
+        <DrawingEditor
+          scene={scene as DrawingScene}
+          onApply={d => p.onReplaceScene(p.selected, d)}
+          onClose={() => setEditingDrawing(false)}
+        />
+      )}
     </aside>
   );
 }

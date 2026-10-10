@@ -31,6 +31,8 @@ export interface Project {
   scenes: Scene[];
   /** The narration and its word times, when there is one. */
   narration?: { text: string; words: WordTime[] };
+  /** Show the word-highlight captions. Default true. */
+  captions?: boolean;
 }
 
 export interface Issue { level: 'error' | 'warning' | 'info'; sceneIndex?: number; message: string }

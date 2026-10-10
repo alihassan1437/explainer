@@ -40,7 +40,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, project: Project, t: nu
       drawSceneTitle(env, s.title);
       drawDrawing(env, s);
     }
-    drawCaptions(ctx, project, palette, f, now);
+    if (project.captions !== false) drawCaptions(ctx, project, palette, f, now);
   }
   ctx.restore();
 }
