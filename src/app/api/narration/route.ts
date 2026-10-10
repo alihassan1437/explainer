@@ -8,7 +8,7 @@ export const maxDuration = 120;
 
 const MAX_CHARS = 5000;
 
-interface Body { text?: unknown; voice?: unknown }
+interface Body { text?: unknown; voice?: unknown; key?: unknown }
 
 /** Creates narration audio with word timings. The Google key stays on the server. */
 export async function POST(request: Request): Promise<NextResponse> {
@@ -23,9 +23,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (text.length > MAX_CHARS) {
     return NextResponse.json({ ok: false, error: `The script is ${text.length.toLocaleString()} characters; the most one narration can read is ${MAX_CHARS.toLocaleString()}.` }, { status: 400 });
   }
-  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  const apiKey = process.env.GOOGLE_TTS_API_KEY
+    || (typeof body.key === 'string' && body.key.trim() ? body.key.trim() : '');
   if (!apiKey) {
-    return NextResponse.json({ ok: false, error: 'Narration is not set up yet: the server needs a GOOGLE_TTS_API_KEY.' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'Narration needs a Google TTS key: paste yours in the editor, or set GOOGLE_TTS_API_KEY on the server.' }, { status: 500 });
   }
   const voice = pickVoice(typeof body.voice === 'string' && isVoice(body.voice) ? body.voice : undefined);
   try {
