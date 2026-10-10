@@ -1,7 +1,6 @@
-import Editor from '@/explainer/editor/Editor';
-import { SAMPLES } from '@/explainer/sample';
+import Dashboard from '@/explainer/dashboard/Dashboard';
 
-/** The Explainer editor. */
-export default function ExplainerPage() {
-  return <Editor samples={SAMPLES} />;
+/** The dashboard: every video, examples, and a way to start new ones. */
+export default function Home() {
+  return <Dashboard />;
 }

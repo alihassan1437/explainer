@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Pause, Play, RotateCcw } from 'lucide-react';
 import type { Project, Scene, ThemeId } from '../types';
 import { drawFrame } from '../draw/frame';
@@ -12,18 +13,7 @@ import { SceneStrip } from './SceneStrip';
 import { Inspector } from './Inspector';
 import { playWhoosh, uiAudioContext } from './whoosh';
 import { downloadExport, exportVideo } from './export';
-
-const DEMO_SCRIPT = `How does a car engine turn fuel into motion? It all comes down to four strokes, repeating hundreds of times every minute.
-
-First, the intake stroke. The piston moves down, the intake valve opens, and a mix of fuel and air is drawn into the cylinder.
-
-Then compression. Both valves shut. The piston rises and squeezes that mixture into a tiny space.
-
-Then comes the power stroke. The spark plug fires. The mixture explodes, and the blast shoves the piston down. That push is what turns your wheels.
-
-Finally, the exhaust stroke. The exhaust valve opens, the piston rises, and the burnt gas is pushed out. And then it all starts again.`;
-
-export interface SampleChoice { id: string; label: string; project: Project }
+import type { ProjectDoc } from '../store/db';
 
 export const btn = 'inline-flex items-center justify-center h-8 px-3 rounded-lg text-sm font-medium border transition-colors';
 export const btnOn = 'border-sky-400/60 bg-sky-400/15 text-sky-100';
@@ -31,25 +21,31 @@ export const btnOff = 'border-white/10 text-slate-400 hover:bg-white/5';
 export const field = 'w-full rounded-lg border border-white/10 bg-white/[.03] px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-600';
 export const label = 'mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-500';
 
-/** The Explainer editor: script on the left, preview in the middle, scene inspector on the right. */
-export default function Editor({ samples }: { samples: SampleChoice[] }) {
-  const [sampleId, setSampleId] = useState(samples[0].id);
-  const [project, setProject] = useState<Project>(samples[0].project);
+/** The Explainer editor: script on the left, preview in the middle, scene inspector on the right. Reports every change to its owner, which saves it. */
+export default function Editor({ initialDoc, onDocChange, saveState }: {
+  initialDoc: ProjectDoc;
+  onDocChange: (doc: ProjectDoc) => void;
+  saveState: 'saved' | 'saving';
+}) {
+  const docId = useRef(initialDoc.id).current;
+  const [title, setTitle] = useState(initialDoc.title);
+  const [project, setProject] = useState<Project>(initialDoc.project);
   const [t, setT] = useState(1500);
   const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState(0);
   const [width, setWidth] = useState(0);
   // Narration.
-  const [script, setScript] = useState(DEMO_SCRIPT);
-  const [voice, setVoice] = useState(DEFAULT_VOICE);
+  const [script, setScript] = useState(initialDoc.script);
+  const [voice, setVoice] = useState(initialDoc.voice || DEFAULT_VOICE);
+  const [narrVoice, setNarrVoice] = useState<string | null>(initialDoc.narrationVoice);
   const [ttsKey, setTtsKey] = useState(() => (typeof window === 'undefined' ? '' : window.localStorage.getItem('explainer-tts-key') ?? ''));
   const [generating, setGenerating] = useState(false);
   const [narrError, setNarrError] = useState('');
   const [narrInfo, setNarrInfo] = useState('');
   // Sound.
-  const [musicUrl, setMusicUrl] = useState('');
-  const [musicVol, setMusicVol] = useState(0.5);
-  const [whooshOn, setWhooshOn] = useState(true);
+  const [musicUrl, setMusicUrl] = useState(initialDoc.musicUrl);
+  const [musicVol, setMusicVol] = useState(initialDoc.musicVol);
+  const [whooshOn, setWhooshOn] = useState(initialDoc.whooshOn);
   // Export.
   const [exporting, setExporting] = useState<null | { done: number; total: number }>(null);
   const [exportError, setExportError] = useState('');
@@ -167,18 +163,45 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
 
   // --- project edits ---------------------------------------------------------
   /** Parks the playhead inside the first scene, past the opening fade, so the canvas shows something. */
+  // Restore a saved narration's audio once, and report every change to the owner.
+  const restoredNarr = useRef(false);
+  useEffect(() => {
+    if (restoredNarr.current) return;
+    restoredNarr.current = true;
+    if (initialDoc.narrationAudio) {
+      const a = new Audio();
+      a.src = initialDoc.narrationAudio; a.preload = 'auto';
+      narrationAudio.current = a;
+      const words = initialDoc.project.narration?.words ?? [];
+      if (words.length) {
+        const dur = words.reduce((m, w) => Math.max(m, w.endMs), 0);
+        setNarrInfo(`${words.length} words · ${(dur / 1000).toFixed(1)}s${initialDoc.narrationVoice ? ` · ${initialDoc.narrationVoice}` : ''}`);
+      }
+    }
+    if (initialDoc.musicUrl) setMusic(initialDoc.musicUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const onDocChangeRef = useRef(onDocChange);
+  onDocChangeRef.current = onDocChange;
+  const firstReport = useRef(true);
+  useEffect(() => {
+    if (firstReport.current) { firstReport.current = false; return; }
+    onDocChangeRef.current({
+      id: docId,
+      title: title || 'Untitled video',
+      updatedAt: Date.now(),
+      script, voice, musicUrl, musicVol, whooshOn,
+      project,
+      narrationAudio: narrationAudio.current?.src || null,
+      narrationVoice: narrVoice,
+      thumb: null, // the owner re-renders it on save
+    });
+  }, [docId, title, script, voice, musicUrl, musicVol, whooshOn, project, narrVoice]);
+
   const parkAtStart = (proj: Project): void => {
     const v = Math.min(1500, layoutTimeline(proj).totalMs * 0.25);
     setTime(v); setSelected(0); lastSceneRef.current = -1;
     syncAudioTo(v);
-  };
-  const choose = (id: string): void => {
-    const s = samples.find(x => x.id === id);
-    if (!s) return;
-    doPause();
-    setSampleId(id);
-    setProject(s.project);
-    parkAtStart(s.project);
   };
   const updateScene = (i: number, patch: Partial<Scene>): void =>
     setProject(p => ({ ...p, scenes: p.scenes.map((s, k) => (k === i ? ({ ...s, ...patch } as Scene) : s)) }));
@@ -229,6 +252,7 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
       const a = narrationAudio.current ?? new Audio();
       narrationAudio.current = a;
       a.src = data.audio; a.preload = 'auto';
+      setNarrVoice(data.voice ?? voice);
       setProject(p => ({ ...p, narration: { text: script, words: data.words ?? [] } }));
       setNarrInfo(`${data.words.length} words · ${((data.durationMs ?? 0) / 1000).toFixed(1)}s · ${data.voice}`);
     } catch (e) {
@@ -287,13 +311,10 @@ export default function Editor({ samples }: { samples: SampleChoice[] }) {
     <div className="flex h-screen flex-col bg-slate-950 text-slate-100">
       {/* top bar */}
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-white/10 px-4">
-        <span className="text-sm font-bold tracking-tight">Explainer</span>
-        <nav className="flex gap-1">
-          {samples.map(s => (
-            <button key={s.id} type="button" onClick={() => choose(s.id)}
-              className={`${btn} ${sampleId === s.id ? btnOn : btnOff}`}>{s.label}</button>
-          ))}
-        </nav>
+        <Link href="/" className="text-sm text-slate-400 hover:text-slate-200" title="All videos">←</Link>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Untitled video"
+          className="w-56 bg-transparent text-sm font-bold tracking-tight text-slate-100 placeholder:text-slate-600 focus:outline-none" />
+        <span className="text-xs text-slate-600">{saveState === 'saving' ? 'Saving…' : 'Saved'}</span>
         <span className="ml-auto text-xs text-slate-500">{(total / 1000).toFixed(1)}s</span>
         <button type="button" onClick={() => void startExport()}
           className={`${btn} border-sky-400/40 bg-sky-400/10 font-semibold text-sky-200 hover:bg-sky-400/20`}>

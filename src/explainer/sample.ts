@@ -2,6 +2,17 @@ import type { Project } from './types';
 import { ENGINE_DRAWING } from './examples/engine';
 import { WATER_CYCLE_DRAWING } from './examples/water-cycle';
 
+/** The narration script that goes with the engine example. */
+export const ENGINE_SCRIPT = `How does a car engine turn fuel into motion? It all comes down to four strokes, repeating hundreds of times every minute.
+
+First, the intake stroke. The piston moves down, the intake valve opens, and a mix of fuel and air is drawn into the cylinder.
+
+Then compression. Both valves shut. The piston rises and squeezes that mixture into a tiny space.
+
+Then comes the power stroke. The spark plug fires. The mixture explodes, and the blast shoves the piston down. That push is what turns your wheels.
+
+Finally, the exhaust stroke. The exhaust valve opens, the piston rises, and the burnt gas is pushed out. And then it all starts again.`;
+
 /** "How an engine works", with the engine written entirely as data in the drawing format an agent uses. */
 export const SAMPLE_ENGINE_DRAWING: Project = {
   aspect: '16:9',
