@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { background: #020617; color: #f1f5f9; overscroll-behavior-y: none; }
+
+@layer base {
+  :focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+@layer utilities {
+  .min-h-screen-safe { min-height: 100vh; min-height: 100dvh; }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "explainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A script becomes a narrated, animated 2D explainer video, drawn by code in the browser. Agents draw their own components as data.",
+  "scripts": {
+    "dev": "next dev -p 9003",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node tests/explainer.test.cjs && node tests/explainer-drawing.test.cjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.475.0",
+    "next": "15.5.26",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19.2.1",
+    "@types/react-dom": "^19.2.1",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "15.5.26",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
